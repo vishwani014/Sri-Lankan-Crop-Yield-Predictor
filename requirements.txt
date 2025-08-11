@@ -1,0 +1,15 @@
+pandas
+scikit-learn
+xgboost
+matplotlib
+seaborn
+folium
+streamlit
+requests
+beautifulsoup4
+earthaccess
+cdsapi
+numpy
+pytest
+xarray
+pdfplumber
