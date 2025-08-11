@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 import time
 import xarray as xr
 from urllib.parse import urljoin
+from dotenv import load_dotenv
 
 
 # current/forecast weather
@@ -135,9 +136,15 @@ def fetch_ndvi_data(start_date, end_date, output_path):
 
 
 if __name__ == "__main__":
+    load_dotenv()
+
     os.makedirs("data/raw", exist_ok=True)
 
-    API_KEY = "9d2461fdc22bfda50683fd1cc1a461bb"
+    # set api key for open  weather
+    API_KEY = os.getenv("OPENWEATHER_API_KEY")
+    if not API_KEY:
+        raise ValueError("OPENWEATHER_API_KEY not set in .env file")
+    
     CITIES = ["Kurunegala", "Anuradhapura", "Kandy", "Matale"]
     fetch_openweather_data(API_KEY, CITIES, "data/raw/weather_current.csv")
 
