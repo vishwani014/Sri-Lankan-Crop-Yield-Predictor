@@ -154,4 +154,4 @@ if __name__ == "__main__":
     CBSL_URL = "https://www.cbsl.gov.lk/en/statistics/economic-indicators/price-report"
     scrape_cbsl_prices(CBSL_URL, "data/raw/market_prices.csv")
 
-    fetch_ndvi_data("2023-01-01", "2023-12-31", "data/raw/ndvi.csv")
+    fetch_ndvi_data("2025-01-01", "2025-08-01", "data/raw/ndvi.csv")
