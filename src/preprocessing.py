@@ -255,8 +255,6 @@ def merge_seasonal_data(maha_path, yala_path, output_path):
 def preprocess_population_data(population_path, output_path):
     population_data = pd.read_csv(population_path, skiprows=3)
 
-    population_data.to_csv(output_path, index=False)
-
     # Filter for Sri Lanka
     population_data = population_data[population_data['Country Name'] == 'Sri Lanka'].copy()
 
@@ -287,6 +285,36 @@ def preprocess_population_data(population_path, output_path):
     population_data.to_csv(output_path, index=False)
     print(f"Successfully created {output_path}")
     return population_data
+
+def preprocess_inflation_data(inflation_path, output_path):
+    inflation_data = pd.read_csv(inflation_path, skiprows=4)
+
+    # Filter for Sri Lanka
+    inflation_data = inflation_data[inflation_data['Country Name'] == 'Sri Lanka'].copy()
+
+    # Reshape from wide to long format using melt
+    id_vars = ['Country Name', 'Country Code', 'Indicator Name', 'Indicator Code']
+    value_vars = [str(year) for year in range(1960, 2025)]
+    inflation_data = inflation_data.melt(id_vars=id_vars, value_vars=value_vars, var_name='Year', value_name='Inflation')
+
+    # Clean and convert data types
+    inflation_data['Year'] = pd.to_numeric(inflation_data['Year'], errors='coerce').astype('Int64')
+    inflation_data['Inflation'] = pd.to_numeric(inflation_data['Inflation'], errors='coerce')
+
+    # handle missing values
+    inflation_data = inflation_data.dropna(subset=['Year', 'Inflation'])
+
+    # remove unwanted columns
+    inflation_data = inflation_data[['Year', 'Inflation']].copy()
+
+    inflation_data = inflation_data.drop_duplicates()
+
+    inflation_data = inflation_data.sort_values('Year')
+
+    inflation_data.to_csv(output_path, index=False)
+    print(f"Successfully created {output_path}")
+    return inflation_data
+
 
 if __name__ == "__main__":
     # preprocess_data(
@@ -324,4 +352,10 @@ if __name__ == "__main__":
 
     preprocess_population_data(
         "data/raw/population.csv",
-        "data/processed/population.csv")
+        "data/processed/population.csv"
+    )
+    
+    preprocess_inflation_data(
+        "data/raw/Inflation.csv",
+        "data/processed/inflation.csv"
+    )
