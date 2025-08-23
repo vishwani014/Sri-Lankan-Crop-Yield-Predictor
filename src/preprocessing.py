@@ -131,7 +131,7 @@ def preprocess_rainfall(rainfall_path, output_path):
         lambda m: 'Maha' if m in [9,10, 11, 12, 1, 2, 3] else ('Yala' if m in [4,5, 6, 7, 8] else 'Unknown') 
     )
 
-    agg_rainfall = rainfall_data.groupby(['year', 'season']).agg({
+    agg_rainfall = rainfall_data.groupby(['year', 'season', 'adm_id']).agg({
         'rfh': 'mean',
         'rfh_avg': 'mean',
         'r1h': 'mean',
@@ -315,6 +315,69 @@ def preprocess_inflation_data(inflation_path, output_path):
     print(f"Successfully created {output_path}")
     return inflation_data
 
+def merge_all_data(price_data, rainfall_data, yield_data, population_data, inflation_data, output_path):
+    price_data = pd.read_csv(price_data)
+    rainfall_data = pd.read_csv(rainfall_data)
+    yield_data = pd.read_csv(yield_data)
+    population_data = pd.read_csv(population_data)
+    inflation_data = pd.read_csv(inflation_data)
+
+    # Merge datasets
+    # Start with paddy data
+    merged_data = yield_data.copy()
+
+    # Merge with rice prices
+    price_data = price_data.rename(columns={'year': 'Year'})
+    merged_data = merged_data.merge(
+        price_data,
+        on=['Year', 'season'],
+        how='left'
+    )
+
+    # Merge with rainfall data
+    rainfall_national = rainfall_data.groupby(['year', 'season']).agg({
+        'rfh': 'mean',
+        'rfh_avg': 'mean',
+        'r1h': 'mean',
+        'r1h_avg': 'mean',
+        'r3h': 'mean',
+        'r3h_avg': 'mean',
+        'rfq': 'mean'
+    }).reset_index().rename(columns={'year': 'Year'})
+
+    merged_data = merged_data.merge(
+        rainfall_national,
+        on=['Year', 'season'],
+        how='left'
+    )
+
+    # Merge with population
+    merged_data = merged_data.merge(
+        population_data,
+        on='Year',
+        how='left'
+    )
+
+    # Merge with inflation
+    merged_data = merged_data.merge(
+        inflation_data,
+        on='Year',  
+        how='left'
+    )
+
+    # since market price data is available from 2004 onwards
+    merged_data = merged_data.dropna(subset=['avg_price_lkr'])
+
+    numeric_cols = ['avg_price_usd', 'rfh', 'rfh_avg', 'r1h', 'r1h_avg', 'r3h', 'r3h_avg', 'rfq', 'Population', 'Population_Growth_Rate', 'Inflation', 'Sown_to_Harvest_Ratio']
+    merged_data[numeric_cols] = merged_data[numeric_cols].fillna(merged_data[numeric_cols].median())
+
+    merged_data = merged_data.dropna(subset=['Avg_Yield_Kg_Ha'])
+    
+    merged_data.to_csv(output_path, index=False)
+    print(f"Successfully created {output_path}")
+    print(f"Merged rows: {len(merged_data)}")
+    return merged_data
+
 
 if __name__ == "__main__":
     # preprocess_data(
@@ -358,4 +421,13 @@ if __name__ == "__main__":
     preprocess_inflation_data(
         "data/raw/Inflation.csv",
         "data/processed/inflation.csv"
+    )
+
+    merge_all_data(
+        "data/processed/seasonal_rice_prices.csv",
+        "data/processed/seasonal_rainfall.csv",
+        "data/processed/combined_yield_data.csv",
+        "data/processed/population.csv",
+        "data/processed/inflation.csv",
+        "data/processed/merged_data.csv"
     )
