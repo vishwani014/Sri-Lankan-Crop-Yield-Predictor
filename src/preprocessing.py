@@ -53,10 +53,58 @@ def preprocess_data(weather_path, prices_path, ndvi_path, output_path):
     print(f"Successfully created {output_path}")
     return merged
 
+def preprocess_price(price_path, output_path):
+    prices_data = pd.read_csv(price_path)
+
+    # Filter rows where 'commodity' contains "rice"
+    riceprice_data = prices_data[prices_data['commodity'].str.contains('rice', case=False, na=False)].copy()
+
+    # Handle data types and cleaning
+    riceprice_data['date'] = pd.to_datetime(riceprice_data['date'], errors='coerce')
+
+    numeric_columns = ['latitude', 'longitude', 'price', 'usdprice']
+    for col in numeric_columns:
+        riceprice_data[col] = pd.to_numeric(riceprice_data[col], errors='coerce')
+    riceprice_data = riceprice_data.dropna(subset=['date', 'price'])
+
+    # Handle missing values in other columns
+    # Categorical columns
+    categorical_cols = ['admin1', 'admin2', 'market', 'category', 'commodity', 'unit', 'priceflag', 'pricetype', 'currency']
+    riceprice_data[categorical_cols] = riceprice_data[categorical_cols].fillna('Unknown')
+
+    # numeric columns
+    riceprice_data['market_id'] = riceprice_data['market_id'].fillna('Unknown')
+    riceprice_data['commodity_id'] = riceprice_data['commodity_id'].fillna('Unknown')
+
+    riceprice_data['longitude'] = riceprice_data['longitude'].fillna(riceprice_data['longitude'].median())
+    riceprice_data['latitude'] = riceprice_data['latitude'].fillna(riceprice_data['latitude'].median())
+
+    riceprice_data = riceprice_data.drop_duplicates()
+
+    riceprice_data['year'] = riceprice_data['date'].dt.year
+    riceprice_data['month'] = riceprice_data['date'].dt.month
+
+    riceprice_data = riceprice_data.sort_values('date')
+
+    riceprice_data.to_csv(output_path, index=False)
+    print(f"Successfully created {output_path}")
+    return riceprice_data
+
+def preprocess_rainfall(rainfall_path, output_path):
+    rainfall_data = pd.read_csv(rainfall_path)
+
+    # Handle data types
+    rainfall_data['date'] = pd.to_datetime(rainfall_data['date'], errors='coerce')
+
 if __name__ == "__main__":
-    preprocess_data(
-        "data/raw/weather_current.csv",
-        "data/raw/market_prices.csv",
-        "data/raw/ndvi.csv",
-        "data/processed/merged_data.csv"
+    # preprocess_data(
+    #     "data/raw/weather_current.csv",
+    #     "data/raw/market_prices.csv",
+    #     "data/raw/ndvi.csv",
+    #     "data/processed/merged_data.csv"
+    # )
+
+    preprocess_price(
+        "data/raw/prices.csv",
+        "data/processed/rice_prices.csv"
     )
