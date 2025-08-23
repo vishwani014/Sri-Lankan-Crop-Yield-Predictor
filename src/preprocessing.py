@@ -190,6 +190,47 @@ def preprocess_paddy_maha_season(maha_season_path, output_path):
     print(f"Successfully created {output_path}")
     return maha_data
 
+def preprocess_paddy_yala_season(yala_seasin_path, output_path):
+    yala_data = pd.read_excel(yala_seasin_path, sheet_name='Yala Season', skiprows=3)
+
+    # drop column A(empty column)
+    yala_data.dropna(axis=1, how='all', inplace=True)
+
+    # renaming
+    yala_data.columns = [
+        'Year', 'Sown_Acres', 'Sown_Ha', 'Harvested_Acres', 'Harvested_Ha',
+        'Avg_Yield_Bushels_Acre', 'Avg_Yield_Kg_Ha', 'Production_Bushels', 'Production_Mt'
+    ]
+
+    # dropped second row with units
+    yala_data = yala_data.drop(index=0).reset_index(drop=True)
+
+    # clean year column
+    yala_data['Year'] = pd.to_numeric(yala_data['Year'], errors='coerce').astype('Int64')
+
+    yala_data['season'] = 'Yala'
+
+    numeric_cols = ['Sown_Acres', 'Sown_Ha', 'Harvested_Acres', 'Harvested_Ha', 'Avg_Yield_Bushels_Acre', 'Avg_Yield_Kg_Ha', 'Production_Bushels', 'Production_Mt'] 
+    for col in numeric_cols:
+        yala_data[col] = pd.to_numeric(yala_data[col], errors='coerce')
+
+    # Handle missing values
+    yala_data = yala_data.dropna(subset=['Avg_Yield_Kg_Ha', 'Production_Mt', 'Year'])
+    yala_data[numeric_cols] = yala_data[numeric_cols].fillna(yala_data[numeric_cols].median())
+
+    # Feature engineering
+    # Sown to harvest ratio
+    yala_data['Sown_to_Harvest_Ratio'] = yala_data['Harvested_Ha'] / yala_data['Sown_Ha']
+
+    yala_data = yala_data.drop_duplicates()
+
+    yala_data = yala_data.sort_values(['Year'])
+
+    yala_data.to_csv(output_path, index=False)
+    print(f"Successfully created {output_path}")
+    return yala_data
+
+
 if __name__ == "__main__":
     # preprocess_data(
     #     "data/raw/weather_current.csv",
@@ -211,4 +252,9 @@ if __name__ == "__main__":
     preprocess_paddy_maha_season(
         "data/raw/Paddy_Maha_Season.xlsx",
         "data/processed/yeild_maha_season.csv"
+    )
+
+    preprocess_paddy_yala_season(
+        "data/raw/Paddy_Yala_Season.xlsx",
+        "data/processed/yeild_yala_season.csv"
     )
