@@ -163,10 +163,10 @@ def preprocess_paddy_maha_season(maha_season_path, output_path):
     maha_data = maha_data.drop(index=0).reset_index(drop=True)
 
     # process year columns
-    maha_data['alt_year'] = maha_data['Year'].str.extract(r'(\d{4})/(\d{2})')[0].astype(int)
-    # maha_data['alt_year'] = maha_data['alt_year'].apply(lambda
+    maha_data['Year'] = maha_data['Year'].str.extract(r'(\d{4})/(\d{2})')[0].astype(int)
+    # maha_data['Year'] = maha_data['Year'].apply(lambda
     #                                                     x: x + 1900 if x >=50 else x + 2000)
-    # maha_data['alt_year'] = maha_data['alt_year'].astype(int)
+    # maha_data['Year'] = maha_data['Year'].astype(int)
 
     maha_data['season'] = 'Maha'
 
@@ -175,7 +175,7 @@ def preprocess_paddy_maha_season(maha_season_path, output_path):
        maha_data[col] = pd.to_numeric(maha_data[col], errors='coerce')
 
     # Handle missing values
-    maha_data = maha_data.dropna(subset=['Avg_Yield_Kg_Ha', 'Production_Mt', 'alt_year'])
+    maha_data = maha_data.dropna(subset=['Avg_Yield_Kg_Ha', 'Production_Mt', 'Year'])
     maha_data[numeric_cols] = maha_data[numeric_cols].fillna(maha_data[numeric_cols].median())
 
     # Feature engineering
@@ -184,7 +184,7 @@ def preprocess_paddy_maha_season(maha_season_path, output_path):
 
     maha_data = maha_data.drop_duplicates()
 
-    maha_data = maha_data.sort_values(['alt_year'])
+    maha_data = maha_data.sort_values(['Year'])
 
     maha_data.to_csv(output_path, index=False)
     print(f"Successfully created {output_path}")
@@ -230,6 +230,29 @@ def preprocess_paddy_yala_season(yala_seasin_path, output_path):
     print(f"Successfully created {output_path}")
     return yala_data
 
+def merge_seasonal_data(maha_path, yala_path, output_path):
+    maha_season_data = pd.read_csv(maha_path)
+    yala_season_data = pd.read_csv(yala_path)
+
+    # concatenate
+    combined_yield_data = pd.concat([maha_season_data, yala_season_data], ignore_index=True)
+
+    combined_yield_data['Year'] = combined_yield_data['Year'].astype('Int64')
+
+    numeric_cols = ['Sown_Acres', 'Sown_Ha', 'Harvested_Acres', 'Harvested_Ha', 'Avg_Yield_Bushels_Acre', 'Avg_Yield_Kg_Ha', 'Production_Bushels', 'Production_Mt', 'Sown_to_Harvest_Ratio']
+    for col in numeric_cols:
+        combined_yield_data[col] = pd.to_numeric(combined_yield_data[col], errors='coerce')
+
+    # sort by year and season
+    combined_yield_data['season'] = pd.Categorical(combined_yield_data['season'], categories=['Maha', 'Yala'], ordered=True)
+    combined_yield_data = combined_yield_data.sort_values(['Year', 'season'])
+
+    combined_yield_data.to_csv(output_path, index=False)
+    print(f"Successfully created {output_path}")
+    print(f"Maha rows: {len(maha_season_data)}, Yala rows: {len(yala_season_data)}, Combined rows: {len(combined_yield_data)}")
+    return combined_yield_data
+ 
+
 
 if __name__ == "__main__":
     # preprocess_data(
@@ -257,4 +280,10 @@ if __name__ == "__main__":
     preprocess_paddy_yala_season(
         "data/raw/Paddy_Yala_Season.xlsx",
         "data/processed/yeild_yala_season.csv"
+    )
+
+    merge_seasonal_data(
+        "data/processed/yeild_maha_season.csv",
+        "data/processed/yeild_yala_season.csv",
+        "data/processed/combined_yield_data.csv"
     )
