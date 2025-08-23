@@ -101,6 +101,7 @@ def preprocess_price(price_path, output_path):
 
     agg_prices.to_csv(output_path, index=False)
     print(f"Successfully created {output_path}")
+    print(f"Original rows: {len(riceprice_data)}, Aggregated rows: {len(agg_prices)}")
     return agg_prices
 
 def preprocess_rainfall(rainfall_path, output_path):
@@ -149,6 +150,45 @@ def preprocess_rainfall(rainfall_path, output_path):
     print(f"Original rows: {len(rainfall_data)}, Aggregated rows: {len(agg_rainfall)}")
     return agg_rainfall
 
+def preprocess_paddy_maha_season(maha_season_path, output_path):
+    maha_data = pd.read_excel(maha_season_path, sheet_name='Maha Season', skiprows=3)
+
+    # drop column A(empty column)
+    maha_data.dropna(axis=1, how='all', inplace=True)
+
+    # renamed for clarity
+    maha_data.columns = ['Year', 'Sown_Acres', 'Sown_Ha', 'Harvested_Acres', 'Harvested_Ha', 'Avg_Yield_Bushels_Acre', 'Avg_Yield_Kg_Ha', 'Production_Bushels', 'Production_Mt']
+
+    # dropped second row with units
+    maha_data = maha_data.drop(index=0).reset_index(drop=True)
+
+    # process year columns
+    maha_data['alt_year'] = maha_data['Year'].str.extract(r'(\d{4})/(\d{2})')[0].astype(int)
+    # maha_data['alt_year'] = maha_data['alt_year'].apply(lambda
+    #                                                     x: x + 1900 if x >=50 else x + 2000)
+    # maha_data['alt_year'] = maha_data['alt_year'].astype(int)
+
+    maha_data['season'] = 'Maha'
+
+    numeric_cols = ['Sown_Acres', 'Sown_Ha', 'Harvested_Acres', 'Harvested_Ha', 'Avg_Yield_Bushels_Acre', 'Avg_Yield_Kg_Ha', 'Production_Bushels', 'Production_Mt']
+    for col in numeric_cols:
+       maha_data[col] = pd.to_numeric(maha_data[col], errors='coerce')
+
+    # Handle missing values
+    maha_data = maha_data.dropna(subset=['Avg_Yield_Kg_Ha', 'Production_Mt', 'alt_year'])
+    maha_data[numeric_cols] = maha_data[numeric_cols].fillna(maha_data[numeric_cols].median())
+
+    # Feature engineering
+    # Sown to harvest ratio
+    maha_data['Sown_to_Harvest_Ratio'] = maha_data['Harvested_Ha'] / maha_data['Sown_Ha']
+
+    maha_data = maha_data.drop_duplicates()
+
+    maha_data = maha_data.sort_values(['alt_year'])
+
+    maha_data.to_csv(output_path, index=False)
+    print(f"Successfully created {output_path}")
+    return maha_data
 
 if __name__ == "__main__":
     # preprocess_data(
@@ -166,4 +206,9 @@ if __name__ == "__main__":
     preprocess_rainfall(
         "data/raw/rainfall.csv",
         "data/processed/seasonal_rainfall.csv"
+    )
+
+    preprocess_paddy_maha_season(
+        "data/raw/Paddy_Maha_Season.xlsx",
+        "data/processed/yeild_maha_season.csv"
     )
