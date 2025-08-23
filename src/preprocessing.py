@@ -83,18 +83,72 @@ def preprocess_price(price_path, output_path):
 
     riceprice_data['year'] = riceprice_data['date'].dt.year
     riceprice_data['month'] = riceprice_data['date'].dt.month
+    riceprice_data['season'] = riceprice_data['month'].apply(
+        lambda m: 'Maha' if m in [9,10, 11, 12, 1, 2, 3] else ('Yala' if m in [4,5, 6, 7, 8] else 'Unknown') 
+    )
 
-    riceprice_data = riceprice_data.sort_values('date')
+    agg_prices = riceprice_data.groupby(['year', 'season', 'commodity']).agg({
+        'price': 'mean',
+        'usdprice': 'mean'
+    }).reset_index()
 
-    riceprice_data.to_csv(output_path, index=False)
+    agg_prices.rename(columns={
+        'price': 'avg_price_lkr',
+        'usdprice': 'avg_price_usd'
+    }, inplace=True)
+
+    agg_prices = agg_prices.sort_values(['year', 'season', 'commodity'])
+
+    agg_prices.to_csv(output_path, index=False)
     print(f"Successfully created {output_path}")
-    return riceprice_data
+    return agg_prices
 
 def preprocess_rainfall(rainfall_path, output_path):
     rainfall_data = pd.read_csv(rainfall_path)
 
     # Handle data types
-    rainfall_data['date'] = pd.to_datetime(rainfall_data['date'], errors='coerce')
+    rainfall_data['date'] = pd.to_datetime(rainfall_data['date'], format="%Y-%m-%d", errors='coerce')
+
+    numeric_cols = ['n_pixels', 'rfh', 'rfh_avg', 'r1h', 'r1h_avg', 'r3h', 'r3h_avg', 'rfq', 'r1q', 'r3q']
+    for col in numeric_cols:
+        rainfall_data[col] = pd.to_numeric(rainfall_data[col], errors='coerce')
+
+    rainfall_data = rainfall_data[rainfall_data['version'] == 'final']
+
+    # Drop rows with missing 'date' or key rainfall metrics
+    rainfall_data = rainfall_data.dropna(subset=['date', 'rfh', 'rfh_avg'])
+
+    rainfall_data[numeric_cols] = rainfall_data[numeric_cols].fillna(rainfall_data[numeric_cols].median())
+
+    # Filter for Sri Lanka-specific data
+    rainfall_data = rainfall_data[rainfall_data['PCODE'].str.startswith('LK', na=False)]
+
+    # DErived Columns
+    rainfall_data['year'] = rainfall_data['date'].dt.year
+    rainfall_data['month'] = rainfall_data['date'].dt.month
+    rainfall_data['season'] = rainfall_data['month'].apply(
+        lambda m: 'Maha' if m in [9,10, 11, 12, 1, 2, 3] else ('Yala' if m in [4,5, 6, 7, 8] else 'Unknown') 
+    )
+
+    agg_rainfall = rainfall_data.groupby(['year', 'season']).agg({
+        'rfh': 'mean',
+        'rfh_avg': 'mean',
+        'r1h': 'mean',
+        'r1h_avg': 'mean',
+        'r3h': 'mean',
+        'r3h_avg': 'mean',
+        'rfq': 'mean'
+    }).reset_index()
+
+    agg_rainfall = agg_rainfall.drop_duplicates()
+
+    agg_rainfall = agg_rainfall.sort_values(['year', 'season'])
+
+    agg_rainfall.to_csv(output_path, index=False)
+    print(f"Successfully created {output_path}")
+    print(f"Original rows: {len(rainfall_data)}, Aggregated rows: {len(agg_rainfall)}")
+    return agg_rainfall
+
 
 if __name__ == "__main__":
     # preprocess_data(
@@ -106,5 +160,10 @@ if __name__ == "__main__":
 
     preprocess_price(
         "data/raw/prices.csv",
-        "data/processed/rice_prices.csv"
+        "data/processed/seasonal_rice_prices.csv"
+    )
+
+    preprocess_rainfall(
+        "data/raw/rainfall.csv",
+        "data/processed/seasonal_rainfall.csv"
     )
