@@ -252,7 +252,41 @@ def merge_seasonal_data(maha_path, yala_path, output_path):
     print(f"Maha rows: {len(maha_season_data)}, Yala rows: {len(yala_season_data)}, Combined rows: {len(combined_yield_data)}")
     return combined_yield_data
  
+def preprocess_population_data(population_path, output_path):
+    population_data = pd.read_csv(population_path, skiprows=3)
 
+    population_data.to_csv(output_path, index=False)
+
+    # Filter for Sri Lanka
+    population_data = population_data[population_data['Country Name'] == 'Sri Lanka'].copy()
+
+    # Reshape from wide to long format using melt
+    id_vars = ['Country Name', 'Country Code', 'Indicator Name', 'Indicator Code']
+    value_vars = [str(year) for year in range(1960, 2025)]
+    population_data = population_data.melt(id_vars=id_vars, value_vars=value_vars, var_name='Year', value_name='Population')
+
+    # Clean and convert data types
+    population_data['Year'] = pd.to_numeric(population_data['Year'], errors='coerce').astype('Int64')
+    population_data['Population'] = pd.to_numeric(population_data['Population'], errors='coerce')
+
+    # handle missing values
+    population_data = population_data.dropna(subset=['Year', 'Population'])
+
+    # Feature Engineering
+    population_data = population_data.sort_values('Year')
+    population_data['Population_Growth_Rate'] = population_data['Population'].pct_change()
+    population_data['Population_Growth_Rate'] = population_data['Population_Growth_Rate'].fillna(0)
+
+    # remove unwanted columns
+    population_data = population_data[['Year', 'Population', 'Population_Growth_Rate']].copy()
+
+    population_data = population_data.drop_duplicates()
+
+    population_data = population_data.sort_values('Year')
+
+    population_data.to_csv(output_path, index=False)
+    print(f"Successfully created {output_path}")
+    return population_data
 
 if __name__ == "__main__":
     # preprocess_data(
@@ -287,3 +321,7 @@ if __name__ == "__main__":
         "data/processed/yeild_yala_season.csv",
         "data/processed/combined_yield_data.csv"
     )
+
+    preprocess_population_data(
+        "data/raw/population.csv",
+        "data/processed/population.csv")
