@@ -58,7 +58,7 @@ Sri-Lankan-Crop-Yield-Predictor/
 Setup Instructions
 
 Clone the Repository:
-git clone https://github.com/your-username/Sri-Lankan-Crop-Yield-Predictor.git
+git clone https://github.com/vishwani014/Sri-Lankan-Crop-Yield-Predictor
 cd Sri-Lankan-Crop-Yield-Predictor
 
 Create Virtual Environment (optional but recommended):
