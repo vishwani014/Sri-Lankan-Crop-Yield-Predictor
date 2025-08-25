@@ -13,9 +13,8 @@ test_df = df[df['Year'] > 2018].copy()
 
 model = joblib.load('models/random_forest_model.pkl')
 features = [
-    'Sown_Ha', 'Sown_to_Harvest_Ratio', 'avg_price_lkr', 'rfh_avg', 'r1h_avg',
-    'Prev_Yield', 'Prev_Rainfall',
-    'Price_Yield_Ratio', 'Season_Encoded'
+    'Sown_Ha', 'Sown_to_Harvest_Ratio', 'rfh_avg', 'r1h_avg', 'r3h_avg', 'rfq', 'Inflation',
+     'Prev_Rainfall', 'Season_Encoded', 'Crisis_Indicator',
 ]
 test_df['Predicted_Yield'] = model.predict(test_df[features])
 

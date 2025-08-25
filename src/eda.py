@@ -18,7 +18,7 @@ def run_eda(data_path):
 
     # Plot 2: Correlation heatmap
     plt.figure(figsize=(10, 8))
-    corr = df[['Avg_Yield_Kg_Ha', 'Sown_Ha', 'Sown_to_Harvest_Ratio', 'avg_price_lkr', 'rfh_avg', 'Population', 'Inflation']].corr()
+    corr = df[['Avg_Yield_Kg_Ha', 'Sown_Ha', 'Sown_to_Harvest_Ratio', 'rfh_avg', 'r1h_avg', 'r3h_avg', 'rfq', 'Population', 'Inflation']].corr()
     sns.heatmap(corr, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
     plt.title('Correlation Heatmap of Features')
     plt.savefig('assets/correlation_heatmap.png')
@@ -43,13 +43,13 @@ def run_eda(data_path):
     plt.close()
 
     # Plot 5: Prices over time
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df, x='Year', y='avg_price_lkr', hue='season')
-    plt.title('Average Rice Price (LKR) Over Time')
-    plt.xlabel('Year')
-    plt.ylabel('Price (LKR)')
-    plt.savefig('assets/prices_over_time.png')
-    plt.close()
+    # plt.figure(figsize=(10, 6))
+    # sns.lineplot(data=df, x='Year', y='avg_price_lkr', hue='season')
+    # plt.title('Average Rice Price (LKR) Over Time')
+    # plt.xlabel('Year')
+    # plt.ylabel('Price (LKR)')
+    # plt.savefig('assets/prices_over_time.png')
+    # plt.close()
 
     # Plot 6: Yield distribution
     plt.figure(figsize=(10, 6))

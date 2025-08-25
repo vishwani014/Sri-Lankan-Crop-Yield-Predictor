@@ -327,12 +327,12 @@ def merge_all_data(price_data, rainfall_data, yield_data, population_data, infla
     merged_data = yield_data.copy()
 
     # Merge with rice prices
-    price_data = price_data.rename(columns={'year': 'Year'})
-    merged_data = merged_data.merge(
-        price_data,
-        on=['Year', 'season'],
-        how='left'
-    )
+    # price_data = price_data.rename(columns={'year': 'Year'})
+    # merged_data = merged_data.merge(
+    #     price_data,
+    #     on=['Year', 'season'],
+    #     how='left'
+    # )
 
     # Merge with rainfall data
     rainfall_national = rainfall_data.groupby(['year', 'season']).agg({
@@ -365,10 +365,17 @@ def merge_all_data(price_data, rainfall_data, yield_data, population_data, infla
         how='left'
     )
 
-    # since market price data is available from 2004 onwards
-    merged_data = merged_data.dropna(subset=['avg_price_lkr'])
+    # Handle missing values
+    merged_data['Missing_Rainfall'] = merged_data['Year'].apply(lambda x: 1 if x < 1980 else 0)
 
-    numeric_cols = ['avg_price_usd', 'rfh', 'rfh_avg', 'r1h', 'r1h_avg', 'r3h', 'r3h_avg', 'rfq', 'Population', 'Population_Growth_Rate', 'Inflation', 'Sown_to_Harvest_Ratio']
+    # Impute missing rainfall data with seasonal medians
+    for season in ['Maha', 'Yala']:
+        season_mask = merged_data['season'] == season
+        for col in ['rfh', 'rfh_avg', 'r1h', 'r1h_avg', 'r3h', 'r3h_avg', 'rfq']:
+            median_value = merged_data[season_mask & (merged_data['Year'] >= 1980)][col].median()
+            merged_data.loc[season_mask & (merged_data['Year'] < 1980), col] = median_value
+
+    numeric_cols = ['Population', 'Population_Growth_Rate', 'Inflation', 'Sown_to_Harvest_Ratio', 'Sown_Ha', 'Harvested_Ha']
     merged_data[numeric_cols] = merged_data[numeric_cols].fillna(merged_data[numeric_cols].median())
 
     merged_data = merged_data.dropna(subset=['Avg_Yield_Kg_Ha'])

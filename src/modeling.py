@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 import joblib
 
 df = pd.read_csv('data/processed/feature_engineered_dataset.csv')
@@ -11,14 +12,10 @@ if 'Season_Encoded' not in df.columns:
     raise ValueError("Season_Encoded column not created. Check 'Season' column values.")
 
 features = [
-    'Sown_Ha', 'Sown_to_Harvest_Ratio', 'avg_price_lkr', 'rfh_avg', 'r1h_avg',
-    'Prev_Yield', 'Prev_Rainfall',
-    'Price_Yield_Ratio','Season_Encoded'
+    'Sown_Ha', 'Sown_to_Harvest_Ratio', 'rfh_avg', 'r1h_avg', 'r3h_avg', 'rfq', 'Inflation',
+     'Prev_Rainfall', 'Season_Encoded', 'Crisis_Indicator',
 ]
 target = 'Avg_Yield_Kg_Ha'
-
-# Encode Season (Maha=1, Yala=0)
-# df['Season_Encoded'] = df['season'].map({'Maha': 1, 'Yala': 0})
 
 # Split data
 train_df = df[df['Year'] <= 2018]
@@ -28,9 +25,32 @@ y_train = train_df[target]
 X_test = test_df[features]
 y_test = test_df[target]
 
+param_grid = {
+    'n_estimators': [100, 150, 200],         # Number of trees
+    'max_depth': [10, 20, None],              # Max depth of the trees (None means no limit)
+    'min_samples_leaf': [1, 2, 4],            # Min samples required at a leaf node
+    'max_features': ['sqrt', 'log2']          # Number of features to consider for a split
+}
+
+
 # Train Random Forest
-model = RandomForestRegressor(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
+model = RandomForestRegressor(random_state=42)
+
+tscv = TimeSeriesSplit(n_splits=5)
+
+grid_search = GridSearchCV(estimator=model, 
+                           param_grid=param_grid, 
+                           cv=tscv, 
+                           scoring='neg_mean_squared_error', 
+                           n_jobs=-1, 
+                           verbose=2)
+
+grid_search.fit(X_train, y_train)
+
+print(f"Best Hyperparameters: {grid_search.best_params_}")
+
+model = grid_search.best_estimator_
+# model.fit(X_train, y_train)
 
 # Predict and evaluate
 y_pred = model.predict(X_test)
